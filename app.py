@@ -7,6 +7,14 @@ import numpy as np
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
 
+import gdown
+
+file_id = "1F9uBAD94f2_uZ4104F3rqAC95d850Qvr"
+output = "similarity.pkl"
+
+if not os.path.exists(output):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output, quiet=False)
 # -----------------------------
 # Load environment variables
 # -----------------------------

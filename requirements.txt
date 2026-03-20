@@ -1,5 +1,5 @@
 numpy==1.26.4
 pandas==2.2.3
-streamlit
-scikit-learn
-requests
+scikit-learn==1.4.2
+streamlit==1.32.2
+requests==2.31.0

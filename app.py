@@ -2,32 +2,42 @@ import streamlit as st
 import pandas as pd
 import pickle
 import requests
+import os
+import numpy as np
+from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor
+
+# -----------------------------
+# Load environment variables
+# -----------------------------
+load_dotenv()
+API_KEY = os.getenv("TMDB_API_KEY")
 
 # -----------------------------
 # Cached function to fetch movie poster
 # -----------------------------
-@st.cache_data
+@st.cache_data(ttl=86400)
 def fetch_poster(movie_id):
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key=f9beac9a00e7078e15c531c740ead1f9&language=en-US"
+    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}&language=en-US"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
+
         poster_path = data.get('poster_path')
         if poster_path:
             return "https://image.tmdb.org/t/p/w500/" + poster_path
         else:
             return "https://via.placeholder.com/500x750?text=No+Poster"
-    except requests.exceptions.RequestException as e:
-        print("Error fetching poster:", e)
+
+    except requests.exceptions.RequestException:
         return "https://via.placeholder.com/500x750?text=No+Poster"
 
 # -----------------------------
 # Function to fetch multiple posters in parallel
 # -----------------------------
 def fetch_multiple_posters(movie_ids):
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         return list(executor.map(fetch_poster, movie_ids))
 
 # -----------------------------
@@ -35,16 +45,20 @@ def fetch_multiple_posters(movie_ids):
 # -----------------------------
 def recommender(movie_name):
     try:
-        movie_index = movies[movies['title'] == movie_name].index[0]
+        movie_index = movies[movies['title'].str.lower() == movie_name.lower()].index[0]
         distances = similarity[movie_index]
-        movies_list = sorted(list(enumerate(distances)), reverse=True, key=lambda x: x[1])[1:6]
 
-        movie_ids = [movies.iloc[i[0]].movie_id for i in movies_list]
-        recommend_movies = [movies.iloc[i[0]].title for i in movies_list]
-        recommended_movies_poster = fetch_multiple_posters(movie_ids)
+        movie_indices = np.argsort(distances)[::-1][1:6]
 
-        return recommend_movies, recommended_movies_poster
-    except IndexError:
+        movie_ids = movies.iloc[movie_indices].movie_id.values
+        recommend_movies = movies.iloc[movie_indices].title.values
+
+        posters = fetch_multiple_posters(movie_ids)
+
+        return recommend_movies, posters
+
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
         return [], []
 
 # -----------------------------
@@ -65,37 +79,17 @@ selected_movie_name = st.selectbox(
     movies['title'].values
 )
 
-# CSS for hover effect
-st.markdown(
-    """
-    <style>
-    .movie-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border-radius: 12px;
-    }
-    .movie-card:hover {
-        transform: scale(1.05);
-        box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.3);
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # Recommend button
 if st.button('Recommend'):
-    names, posters = recommender(selected_movie_name)
-    if names:
-        cols = st.columns(5, gap="medium")
-        for col, name, poster in zip(cols, names, posters):
-            with col:
-                st.markdown(
-                    f"<div style='text-align:center; font-weight:bold; white-space: nowrap; overflow-x: auto;'>{name}</div>",
-                    unsafe_allow_html=True
-                )
-                st.markdown(
-                    f"<img src='{poster}' class='movie-card' style='width:100%; border-radius:12px;'>",
-                    unsafe_allow_html=True
-                )
-    else:
-        st.warning("No recommendations found for this movie.")
+    with st.spinner("Finding best movies for you... 🎬"):
+        names, posters = recommender(selected_movie_name)
+
+        if len(names) > 0:
+            cols = st.columns(5)
+
+            for col, name, poster in zip(cols, names, posters):
+                with col:
+                    st.image(poster, use_container_width=True)
+                    st.caption(name)
+        else:
+            st.warning("No recommendations found for this movie.")

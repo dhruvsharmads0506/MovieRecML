@@ -23,7 +23,7 @@ download_file("1bQ0dWzvt-DJ-ZYD9l1ao9pVzwO52xwKL", "movies_dict.pkl")
 
 
 # -----------------------------
-# API KEY (Streamlit Secrets)
+# API KEY
 # -----------------------------
 try:
     API_KEY = st.secrets["TMDB_API_KEY"]
@@ -37,14 +37,10 @@ except:
 # -----------------------------
 @st.cache_data
 def load_data():
-    try:
-        movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
-        movies = pd.DataFrame(movies_dict)
-        similarity = pickle.load(open('similarity.pkl', 'rb'))
-        return movies, similarity
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        st.stop()
+    movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
+    movies = pd.DataFrame(movies_dict)
+    similarity = pickle.load(open('similarity.pkl', 'rb'))
+    return movies, similarity
 
 movies, similarity = load_data()
 
@@ -61,7 +57,7 @@ def fetch_poster(movie_id):
 
         poster_path = data.get('poster_path')
         if poster_path:
-            return "https://image.tmdb.org/t/p/w500/" + poster_path
+            return "https://image.tmdb.org/t/p/w200/" + poster_path  # 🔥 smaller = faster
     except:
         pass
 
@@ -103,15 +99,29 @@ def recommender(movie_name):
 # -----------------------------
 st.set_page_config(page_title="Movie Recommender", layout="wide")
 
+# 🎨 Simple Styling
+st.markdown("""
+<style>
+.movie-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    margin-top: 5px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title('🎬 Movie Recommender System')
 
-# safety check
-if movies.empty:
-    st.error("Movies data not loaded properly.")
-    st.stop()
+# Loader while loading movies
+with st.spinner("Loading movies... 🎬"):
+    if movies.empty:
+        st.error("Movies data not loaded properly.")
+        st.stop()
 
+# Movie selection
 selected_movie_name = st.selectbox(
-    'Which movie do you want recommendations for?',
+    '🔍 Search or select a movie',
     movies['title'].values,
     key="movie_select"
 )
@@ -119,19 +129,22 @@ selected_movie_name = st.selectbox(
 # -----------------------------
 # Recommend Button
 # -----------------------------
-if st.button('Recommend'):
-    with st.spinner("Finding best movies for you... 🎬"):
+if st.button('🚀 Recommend'):
+
+    # Loader while recommending
+    with st.spinner(f"Finding movies like '{selected_movie_name}' 🍿..."):
         names, posters = recommender(selected_movie_name)
 
-        if len(names) > 0:
-            cols = st.columns(5)
+    if len(names) > 0:
+        cols = st.columns(5)
 
-            for col, name, poster in zip(cols, names, posters):
-                with col:
-                    if poster:
-                        st.image(poster, width=200)  # ✅ FIXED
-                    else:
-                        st.image("https://via.placeholder.com/500x750?text=No+Image", width=200)
-                    st.caption(name)
-        else:
-            st.warning("No recommendations found.")
+        for col, name, poster in zip(cols, names, posters):
+            with col:
+                if poster:
+                    st.image(poster, width=180)
+                else:
+                    st.image("https://via.placeholder.com/500x750?text=No+Image", width=180)
+
+                st.markdown(f"<div class='movie-title'>{name}</div>", unsafe_allow_html=True)
+    else:
+        st.warning("No recommendations found.")

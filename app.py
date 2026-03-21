@@ -4,7 +4,6 @@ import pickle
 import requests
 import os
 import numpy as np
-<<<<<<< HEAD
 from concurrent.futures import ThreadPoolExecutor
 import gdown
 
@@ -25,25 +24,6 @@ try:
     API_KEY = st.secrets["TMDB_API_KEY"]
 except:
     API_KEY = os.getenv("TMDB_API_KEY")
-=======
-import gdown
-from concurrent.futures import ThreadPoolExecutor
-
-# -----------------------------
-# Download files from Google Drive
-# -----------------------------
-def download_file(file_id, output):
-    if not os.path.exists(output):
-        url = f"https://drive.google.com/uc?id={file_id}"
-        gdown.download(url, output, quiet=False)
-
-# similarity file
-download_file("1F9uBAD94f2_uZ4104F3rqAC95d850Qvr", "similarity.pkl")
-
-# movies_dict file
-download_file("1bQ0dWzvt-DJ-ZYD9l1ao9pVzwO52xwKL", "movies_dict.pkl")
-
->>>>>>> 26faf5a (Initial commit - Movie Recommender)
 
 # -----------------------------
 # Load API key from Streamlit Secrets
@@ -86,18 +66,11 @@ def fetch_poster(movie_id):
         poster_path = data.get('poster_path')
         if poster_path:
             return "https://image.tmdb.org/t/p/w500/" + poster_path
-<<<<<<< HEAD
 
     except Exception:
         pass
 
     return "https://via.placeholder.com/500x750?text=No+Poster"
-=======
-        else:
-            return "https://via.placeholder.com/500x750?text=No+Poster"
-    except:
-        return "https://via.placeholder.com/500x750?text=No+Poster"
->>>>>>> 26faf5a (Initial commit - Movie Recommender)
 
 
 # -----------------------------
@@ -109,11 +82,7 @@ def fetch_multiple_posters(movie_ids):
 
 
 # -----------------------------
-<<<<<<< HEAD
 # Recommendation function
-=======
-# Recommender function
->>>>>>> 26faf5a (Initial commit - Movie Recommender)
 # -----------------------------
 def recommender(movie_name):
     try:
@@ -133,15 +102,12 @@ def recommender(movie_name):
         st.error(f"Error: {str(e)}")
         return [], []
 
-<<<<<<< HEAD
 # -----------------------------
 # Load data
 # -----------------------------
 movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
 movies = pd.DataFrame(movies_dict)
 similarity = pickle.load(open('similarity.pkl', 'rb'))
-=======
->>>>>>> 26faf5a (Initial commit - Movie Recommender)
 
 # -----------------------------
 # UI
@@ -155,12 +121,9 @@ selected_movie_name = st.selectbox(
     movies['title'].values
 )
 
-<<<<<<< HEAD
 # -----------------------------
 # Recommend Button
 # -----------------------------
-=======
->>>>>>> 26faf5a (Initial commit - Movie Recommender)
 if st.button('Recommend'):
     with st.spinner("Finding best movies for you... 🎬"):
         names, posters = recommender(selected_movie_name)
@@ -178,8 +141,4 @@ if st.button('Recommend'):
 
                     st.caption(name)
         else:
-<<<<<<< HEAD
             st.warning("No recommendations found.")
-=======
-            st.warning("No recommendations found.")
->>>>>>> 26faf5a (Initial commit - Movie Recommender)

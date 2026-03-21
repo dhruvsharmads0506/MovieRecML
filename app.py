@@ -4,29 +4,26 @@ import pickle
 import requests
 import os
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
 import gdown
+from concurrent.futures import ThreadPoolExecutor
 
 # -----------------------------
-# Download similarity.pkl if not present
+# Download files from Google Drive
 # -----------------------------
-file_id = "1F9uBAD94f2_uZ4104F3rqAC95d850Qvr"
-output = "similarity.pkl"
+def download_file(file_id, output):
+    if not os.path.exists(output):
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, output, quiet=False)
 
-if not os.path.exists(output):
-    url = f"https://drive.google.com/uc?id={file_id}"
-    gdown.download(url, output, quiet=False)
+# similarity file
+download_file("1F9uBAD94f2_uZ4104F3rqAC95d850Qvr", "similarity.pkl")
 
-# -----------------------------
-# Get API KEY (Streamlit Cloud safe)
-# -----------------------------
-try:
-    API_KEY = st.secrets["TMDB_API_KEY"]
-except:
-    API_KEY = os.getenv("TMDB_API_KEY")
+# movies_dict file
+download_file("1bQ0dWzvt-DJ-ZYD9l1ao9pVzwO52xwKL", "movies_dict.pkl")
+
 
 # -----------------------------
-# Load API key from Streamlit Secrets
+# API KEY (Streamlit Secrets)
 # -----------------------------
 try:
     API_KEY = st.secrets["TMDB_API_KEY"]
@@ -40,10 +37,14 @@ except:
 # -----------------------------
 @st.cache_data
 def load_data():
-    movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
-    movies = pd.DataFrame(movies_dict)
-    similarity = pickle.load(open('similarity.pkl', 'rb'))
-    return movies, similarity
+    try:
+        movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
+        movies = pd.DataFrame(movies_dict)
+        similarity = pickle.load(open('similarity.pkl', 'rb'))
+        return movies, similarity
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
 movies, similarity = load_data()
 
@@ -53,21 +54,15 @@ movies, similarity = load_data()
 # -----------------------------
 @st.cache_data(ttl=86400)
 def fetch_poster(movie_id):
-    if not API_KEY:
-        return "https://via.placeholder.com/500x750?text=No+API+Key"
-
-    url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}&language=en-US"
-
     try:
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}&language=en-US"
         response = requests.get(url, timeout=10)
-        response.raise_for_status()
         data = response.json()
 
         poster_path = data.get('poster_path')
         if poster_path:
             return "https://image.tmdb.org/t/p/w500/" + poster_path
-
-    except Exception:
+    except:
         pass
 
     return "https://via.placeholder.com/500x750?text=No+Poster"
@@ -82,7 +77,7 @@ def fetch_multiple_posters(movie_ids):
 
 
 # -----------------------------
-# Recommendation function
+# Recommender
 # -----------------------------
 def recommender(movie_name):
     try:
@@ -102,12 +97,6 @@ def recommender(movie_name):
         st.error(f"Error: {str(e)}")
         return [], []
 
-# -----------------------------
-# Load data
-# -----------------------------
-movies_dict = pickle.load(open('movies_dict.pkl', 'rb'))
-movies = pd.DataFrame(movies_dict)
-similarity = pickle.load(open('similarity.pkl', 'rb'))
 
 # -----------------------------
 # UI
@@ -116,9 +105,15 @@ st.set_page_config(page_title="Movie Recommender", layout="wide")
 
 st.title('🎬 Movie Recommender System')
 
+# safety check
+if movies.empty:
+    st.error("Movies data not loaded properly.")
+    st.stop()
+
 selected_movie_name = st.selectbox(
     'Which movie do you want recommendations for?',
-    movies['title'].values
+    movies['title'].values,
+    key="movie_select"
 )
 
 # -----------------------------
@@ -133,12 +128,10 @@ if st.button('Recommend'):
 
             for col, name, poster in zip(cols, names, posters):
                 with col:
-                    # ✅ SAFE IMAGE DISPLAY
-                    if poster and isinstance(poster, str):
-                        st.image(poster, use_container_width=True)
+                    if poster:
+                        st.image(poster, width=200)  # ✅ FIXED
                     else:
-                        st.image("https://via.placeholder.com/500x750?text=No+Image")
-
+                        st.image("https://via.placeholder.com/500x750?text=No+Image", width=200)
                     st.caption(name)
         else:
             st.warning("No recommendations found.")

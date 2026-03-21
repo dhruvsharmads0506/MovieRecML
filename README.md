@@ -30,12 +30,10 @@ Live App
 <h2>📸 Project Preview</h2>
 
 <p align="center">
-<img src="screenshots/home.png" width="800"/>
+<img src="assests/Screenshot 2026-03-21 141344.png"/>
 </p>
 
-<p align="center">
-<img src="screenshots/recommendations.png" width="800"/>
-</p>
+
 
 <br/>
 
